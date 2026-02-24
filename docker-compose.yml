@@ -1,5 +1,6 @@
 services:
   app:
+    container_name: smart-issue-tracer
     build: .
     ports:
       - "5000:5000"
