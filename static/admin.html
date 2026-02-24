@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Issue Tracer — Admin Panel</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+  <script src="assets/tailwind.js"></script>
+  <link href="assets/dm-sans.css" rel="stylesheet">
+  <style>
+    body { font-family: 'DM Sans', system-ui, sans-serif; }
+    .env-row:focus-within { outline: 1px solid rgba(245, 158, 11, 0.4); outline-offset: -1px; border-radius: 0.5rem; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 font-sans">
+  <header class="border-b border-slate-800 bg-slate-900/50">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="/app" class="text-lg font-semibold text-slate-100">Issue Tracer</a>
+        <span class="text-slate-500 text-sm">Admin Panel</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <form action="/admin" method="get" class="inline">
+          <button type="submit" class="text-sm text-amber-400 font-medium hover:text-amber-300">Admin Panel</button>
+        </form>
+        <form action="/api/logout" method="post" class="inline">
+          <button type="submit" class="text-sm text-slate-400 hover:text-slate-200">Log out</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-6">
+    <div class="flex flex-wrap items-center gap-3 mb-6">
+      <a href="/app" id="backBtn" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-slate-100 transition text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back
+      </a>
+      <button type="button" id="saveBtn" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 font-medium hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition text-sm">
+        Save
+      </button>
+      <button type="button" id="cancelBtn" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-200 hover:bg-slate-600 transition text-sm">
+        Cancel
+      </button>
+    </div>
+
+    <div id="successMessage" class="hidden mb-6 p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-sm">
+      Environment saved successfully.
+    </div>
+
+    <div id="errorMessage" class="hidden mb-6 p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300 text-sm"></div>
+
+    <section class="bg-slate-900/60 border border-slate-700/60 rounded-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-700/60">
+        <h2 class="text-sm font-medium text-slate-400 uppercase tracking-wider">Environment variables (.env)</h2>
+        <p class="text-slate-500 text-xs mt-1">Edit values or add new keys. Save to write changes to the .env file.</p>
+      </div>
+      <div id="envList" class="divide-y divide-slate-700/60">
+        <!-- rows injected by JS -->
+      </div>
+      <div class="px-5 py-4 border-t border-slate-700/60">
+        <button type="button" id="addRowBtn" class="text-sm text-amber-400 hover:text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500/50 rounded px-2 py-1 transition">
+          + Add variable
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const envList = document.getElementById('envList');
+    const addRowBtn = document.getElementById('addRowBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+
+    function hideMessages() {
+      successMessage.classList.add('hidden');
+      errorMessage.classList.add('hidden');
+    }
+
+    function showSuccess() {
+      errorMessage.classList.add('hidden');
+      successMessage.classList.remove('hidden');
+      successMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function showError(msg) {
+      successMessage.classList.add('hidden');
+      errorMessage.textContent = msg;
+      errorMessage.classList.remove('hidden');
+      errorMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function createRow(key = '', value = '', masked = false) {
+      const tr = document.createElement('div');
+      tr.className = 'env-row px-5 py-3 flex flex-wrap items-center gap-3 bg-slate-900/40';
+      if (masked) tr.setAttribute('data-masked', 'true');
+      const valueInputType = masked ? 'password' : 'text';
+      const valuePlaceholder = masked ? '•••••••• Leave blank to keep current' : 'value';
+      const displayValue = masked ? '' : value;
+      tr.innerHTML = `
+        <input type="text" class="env-key flex-1 min-w-[120px] px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 text-sm" placeholder="KEY" value="${escapeAttr(key)}" spellcheck="false" />
+        <input type="${valueInputType}" class="env-value flex-1 min-w-[160px] px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 text-sm" placeholder="${escapeAttr(valuePlaceholder)}" value="${escapeAttr(displayValue)}" spellcheck="false" autocomplete="off" />
+        <button type="button" class="env-remove px-2 py-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-700/80 transition text-sm" title="Remove">Remove</button>
+      `;
+      tr.querySelector('.env-remove').addEventListener('click', () => tr.remove());
+      return tr;
+    }
+
+    function escapeAttr(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML.replace(/"/g, '&quot;');
+    }
+
+    function collectEnv() {
+      const env = [];
+      envList.querySelectorAll('.env-row').forEach(row => {
+        const key = (row.querySelector('.env-key').value || '').trim();
+        const valueInput = row.querySelector('.env-value');
+        let value = (valueInput.value || '').trim();
+        if (key) {
+          if (row.getAttribute('data-masked') === 'true' && value === '') value = null;
+          env.push({ key, value });
+        }
+      });
+      return env;
+    }
+
+    function loadEnv() {
+      fetch('/api/env', { credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(data => {
+          hideMessages();
+          envList.innerHTML = '';
+          if (data.ok && Array.isArray(data.env)) {
+            if (data.env.length === 0) {
+              envList.appendChild(createRow('', '', false));
+            } else {
+              data.env.forEach(({ key = '', value = '', masked = false }) => envList.appendChild(createRow(key, value, masked)));
+            }
+          } else {
+            envList.appendChild(createRow('', '', false));
+          }
+        })
+        .catch(() => {
+          showError('Failed to load environment.');
+          envList.innerHTML = '';
+          envList.appendChild(createRow('', '', false));
+        });
+    }
+
+    addRowBtn.addEventListener('click', () => {
+      envList.appendChild(createRow('', '', false));
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const env = collectEnv();
+      if (env.length === 0) {
+        showError('Add at least one variable (key cannot be empty).');
+        return;
+      }
+      saveBtn.disabled = true;
+      hideMessages();
+      fetch('/api/env', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ env }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          saveBtn.disabled = false;
+          if (data.ok) {
+            showSuccess();
+          } else {
+            showError(data.error || 'Save failed.');
+          }
+        })
+        .catch(() => {
+          saveBtn.disabled = false;
+          showError('Network error. Save failed.');
+        });
+    });
+
+    document.getElementById('cancelBtn').addEventListener('click', () => {
+      if (window.history.length > 1) window.history.back();
+      else window.location.href = '/app';
+    });
+
+    loadEnv();
+  </script>
+</body>
+</html>
