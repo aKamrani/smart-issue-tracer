@@ -75,3 +75,13 @@ Copy `example.env` to `.env` and adjust. Parameters:
 | `AI_API_KEY` | API key for the AI service. |
 | `AI_MODEL` | Model name. |
 | `AI_SYSTEM_PROMPT` | System prompt for analysis (e.g. “Analyze and provide RCA in Persian”). |
+
+## Screenshots
+
+| Login | Admin panel |
+|-------|-------------|
+| ![Login](static/assets/images/shot-1.png) | ![Admin](static/assets/images/shot-4.png) |
+
+| Main app | |
+|----------|---|
+| ![App](static/assets/images/shot-2.png) | ![App](static/assets/images/shot-3.png) |
