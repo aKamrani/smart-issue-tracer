@@ -1,4 +1,6 @@
-![Issue Tracer](static/assets/logo.png)
+<p align="center">
+  <img src="static/assets/logo.png" alt="Smart Issue Tracer" />
+</p>
 
 # Smart Issue Tracer
 
